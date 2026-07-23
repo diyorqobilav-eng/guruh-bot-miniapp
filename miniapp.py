@@ -175,10 +175,16 @@ def api_update_settings(chat_id):
 
     new_settings = set_chat_settings(chat_id, clean_updates)
     return jsonify(new_settings)
-@app.route("/ping")
+  @app.route("/ping")
 def ping():
     return "pong OK"
-
+@app.route("/debug")
+def debug():
+    import os
+    files = os.listdir(os.path.dirname(os.path.abspath(__file__)))
+    static_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+    static_files = os.listdir(static_path) if os.path.exists(static_path) else "static papkasi yo'q!"
+    return {"root_files": files, "static_files": static_files}
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
