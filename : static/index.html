@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Guruh sozlamalari</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    color-scheme: light dark;
+  }
+  body {
+    margin: 0;
+    padding: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--tg-theme-bg-color, #ffffff);
+    color: var(--tg-theme-text-color, #111111);
+  }
+  h1 {
+    font-size: 18px;
+    margin: 8px 0 16px;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 12px;
+    margin-bottom: 10px;
+    border-radius: 12px;
+    background: var(--tg-theme-secondary-bg-color, #f2f2f7);
+  }
+  .row .label {
+    font-size: 15px;
+  }
+  .row .desc {
+    font-size: 12px;
+    opacity: 0.6;
+    margin-top: 2px;
+  }
+  .switch {
+    position: relative;
+    width: 46px;
+    height: 26px;
+    flex-shrink: 0;
+  }
+  .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: #c7c7cc;
+    border-radius: 999px;
+    transition: 0.2s;
+  }
+  .slider:before {
+    content: "";
+    position: absolute;
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.2s;
+  }
+  input:checked + .slider {
+    background-color: var(--tg-theme-button-color, #34c759);
+  }
+  input:checked + .slider:before {
+    transform: translateX(20px);
+  }
+  #status {
+    text-align: center;
+    font-size: 13px;
+    opacity: 0.6;
+    margin-top: 16px;
+  }
+  #blocker {
+    text-align: center;
+    margin-top: 40px;
+    font-size: 14px;
+    opacity: 0.7;
+  }
+</style>
+</head>
+<body>
+
+<h1>⚙️ Guruh boshqaruv sozlamalari</h1>
+
+<div id="app" style="display:none;">
+  <div class="row">
+    <div>
+      <div class="label">📢 Majburiy obuna</div>
+      <div class="desc">Kanalga a'zo bo'lmagan yoza olmaydi</div>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="subscription_check" />
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="row">
+    <div>
+      <div class="label">🚫 Spam/reklama filtri</div>
+      <div class="desc">Taqiqlangan so'zlar o'chiriladi</div>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="spam_filter" />
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="row">
+    <div>
+      <div class="label">🔗 Link/username filtri</div>
+      <div class="desc">Havola va @username o'chiriladi</div>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="link_filter" />
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="row">
+    <div>
+      <div class="label">👋 Kirdi-chiqdi xabarlari</div>
+      <div class="desc">"X guruhga qo'shildi" kabi xabarlar o'chiriladi</div>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="join_leave_delete" />
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div id="status">Yuklanmoqda...</div>
+</div>
+
+<div id="blocker" style="display:none;">
+  Bu sahifa faqat Telegram ilovasi ichidan ochilishi kerak.
+</div>
+
+<script>
+  const tg = window.Telegram.WebApp;
+  tg.ready();
+  tg.expand();
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const chatId = urlParams.get("chat_id");
+  const initData = tg.initData;
+
+  const statusEl = document.getElementById("status");
+  const appEl = document.getElementById("app");
+  const blockerEl = document.getElementById("blocker");
+
+  if (!chatId || !initData) {
+    blockerEl.style.display = "block";
+  } else {
+    appEl.style.display = "block";
+    loadSettings();
+  }
+
+  async function loadSettings() {
+    try {
+      const res = await fetch(`/api/settings/${chatId}`);
+      const data = await res.json();
+      for (const key of Object.keys(data)) {
+        const el = document.getElementById(key);
+        if (el) el.checked = !!data[key];
+      }
+      statusEl.textContent = "Sozlamalar yuklandi ✅";
+      attachHandlers();
+    } catch (e) {
+      statusEl.textContent = "Xatolik: sozlamalarni yuklab bo'lmadi";
+    }
+  }
+
+  function attachHandlers() {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach((cb) => {
+      cb.addEventListener("change", () => updateSetting(cb.id, cb.checked));
+    });
+  }
+
+  async function updateSetting(key, value) {
+    statusEl.textContent = "Saqlanmoqda...";
+    try {
+      const res = await fetch(`/api/settings/${chatId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Telegram-Init-Data": initData,
+        },
+        body: JSON.stringify({ [key]: value }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        statusEl.textContent = "❌ " + (err.error || "Xatolik yuz berdi");
+        tg.HapticFeedback.notificationOccurred("error");
+        return;
+      }
+      statusEl.textContent = "Saqlandi ✅";
+      tg.HapticFeedback.notificationOccurred("success");
+    } catch (e) {
+      statusEl.textContent = "❌ Tarmoq xatosi";
+    }
+  }
+</script>
+
+</body>
+</html>
