@@ -175,7 +175,9 @@ def api_update_settings(chat_id):
 
     new_settings = set_chat_settings(chat_id, clean_updates)
     return jsonify(new_settings)
-
+@app.route("/ping")
+def ping():
+    return "pong OK"
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
