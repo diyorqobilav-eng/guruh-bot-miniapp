@@ -149,7 +149,7 @@
   tg.expand();
 
   const urlParams = new URLSearchParams(window.location.search);
-  const chatId = urlParams.get("chat_id");
+  const chatId = tg.initDataUnsafe?.start_param || urlParams.get("chat_id");
   const initData = tg.initData;
 
   const statusEl = document.getElementById("status");
